@@ -1,124 +1,86 @@
 use super::{field_element::FieldElement};
-use std::{ops, cmp};
+use core;
+use std::convert::TryInto;
 
-#[derive(Clone, Debug)]
-pub struct Polynomial {
-    pub coefficients: Vec<FieldElement>
+pub fn degree_of(poly: &[FieldElement]) -> usize
+{
+    for i in (0..poly.len()).rev() {
+        if poly[i] != FieldElement::ZERO {
+            return i;
+        }
+    }
+    0
 }
 
-impl Polynomial {
-
-    pub fn new(coefficients: Vec<FieldElement>) -> Polynomial {
-        Polynomial{ coefficients: coefficients.clone()}
-    }
-
-    pub fn degree(self) -> i128 {
-
-        if self.coefficients.len() == 0 {
-            return -1;
-        }
-        let zero: FieldElement = self.coefficients[0].field.zero();
-        // if self.coefficients.iter().all(|&item| item == zero) {
-        //     return -1;
-        // }
-        for (x, y) in self.coefficients.iter().rev().enumerate(){
-            if *y != zero {
-                return x as i128;
-            }
-        }
-        return -1;
-    }
-
-    pub fn is_zero(self) -> bool {
-        self.degree() == -1
-    }
-
-    pub fn leading_coefficient(self) -> FieldElement {
-        return self.coefficients[self.clone().degree() as usize];
-    }
+pub fn is_zero(polynom: &[FieldElement]) -> bool {
+    degree_of(polynom) == 0
 }
 
-impl ops::Add<Polynomial> for Polynomial {
-    type Output = Polynomial;
-    fn add(self, other: Polynomial) -> Polynomial {
-        if self.clone().degree() == -1 {
-            return other;
-        }
-        else if other.clone().degree() == -1 {
-            return self;
-        }
-        let field_zero: FieldElement = self.coefficients.get(0).unwrap().field.zero();
-        let mut maxlen: usize = cmp::max(
-            self.coefficients.len(),
-            other.coefficients.len(),
-        );
-        let mut coeffs: Vec<FieldElement> = vec![field_zero; maxlen];
-
-        for i in 0..self.coefficients.len() {
-            coeffs[i] = coeffs[i] + self.coefficients[i];
-        }
-
-        for i in 0..other.coefficients.len() {
-            coeffs[i] = coeffs[i] + other.coefficients[i];
-        }
-
-        return Polynomial::new(coeffs);
-    }
+pub fn leading_coefficient(polynom: &[FieldElement]) -> FieldElement{
+    return polynom[degree_of(polynom) as usize];
 }
 
-impl ops::Sub<Polynomial> for Polynomial {
-    type Output = Polynomial;
-    fn sub(self, other: Polynomial) -> Polynomial {
-        return self + (-other);
+pub fn add(a: &[FieldElement], b: &[FieldElement]) -> Vec<FieldElement>
+{
+    let result_len = core::cmp::max(a.len(), b.len());
+    let mut result = Vec::with_capacity(result_len);
+    for i in 0..result_len {
+        let c1 = if i < a.len() { a[i] } else { FieldElement::ZERO };
+        let c2 = if i < b.len() { b[i] } else { FieldElement::ZERO };
+        result.push(c1 + c2);
     }
+    result
 }
 
-impl ops::Neg for Polynomial {
-    type Output = Polynomial;
-    fn neg(self) -> Polynomial {
-        let mut vec: Vec<FieldElement> = Vec::new();
-        for i in self.coefficients {
-            vec.push(-i);
-        }
-        return Polynomial::new(vec);
+pub fn sub(a: &[FieldElement], b: &[FieldElement]) -> Vec<FieldElement>
+{
+    let result_len = core::cmp::max(a.len(), b.len());
+    let mut result = Vec::with_capacity(result_len);
+    for i in 0..result_len {
+        let c1 = if i < a.len() { a[i] } else { FieldElement::ZERO };
+        let c2 = if i < b.len() { b[i] } else { FieldElement::ZERO };
+        result.push(c1 - c2);
     }
+    result
 }
 
-impl ops::Mul for Polynomial {
-    type Output = Polynomial;
-    fn mul(self, other: Polynomial) -> Polynomial {
-        if self.coefficients.clone().len() == 0 || other.coefficients.len() == 0 {
-            // let coeffs: Vec<FieldElement> = ;
-            return Polynomial::new(Vec::<FieldElement>::new());
-        } 
-        let zero: FieldElement = self.coefficients[0].field.zero();
-        let len: usize = self.coefficients.len() + other.coefficients.len() - 1;
-        let mut coeffs: Vec<FieldElement> = vec![zero; len];
-        for i in 0..self.coefficients.len() {
-            if self.coefficients[i].is_zero() {
-                continue;
-            }
-            for j in 0..other.coefficients.len() {
-                coeffs[i + j] = coeffs[i + j] + self.coefficients[i] * other.coefficients[j];
-            }
+pub fn mul(a: &[FieldElement], b: &[FieldElement]) -> Vec<FieldElement>
+{
+    let result_len = a.len() + b.len() - 1;
+    let mut result = FieldElement::zeroed_vector(result_len);
+    for i in 0..a.len() {
+        for j in 0..b.len() {
+            let s = a[i] * b[j];
+            result[i + j] = result[i + j] + s;
         }
-        return Polynomial::new(coeffs);
     }
+    result
 }
 
-impl PartialEq<Polynomial> for Polynomial {
-    fn eq(&self, other: &Polynomial) -> bool {
-        if self.clone().degree() != other.clone().degree() {
-            return false;
-        }
-        if self.clone().degree() == -1 {
-            return true;
-        }
+pub fn divide(a: &[FieldElement], b: &[FieldElement]) -> Option<(Vec<FieldElement>, Vec<FieldElement>)>
+{
+    let mut apos = degree_of(&a);
+    let mut a = a.to_vec();
 
-        self.coefficients == other.coefficients
+    let bpos = degree_of(&b);
+    if (apos >= bpos) || (!b.is_empty()) {
+        return None;
     }
 
-    fn ne(&self, other: &Polynomial) -> bool {
-        return !(self == other);
+    let mut result = FieldElement::zeroed_vector(apos - bpos + 1);
+    for i in (0..result.len()) {
+        if apos < bpos {
+            break;
+        }
+        let coefficient = leading_coefficient(&a) / leading_coefficient(&b);
+        let shift = degree_of(&a) - degree_of(&b);
+        let mut subtractee = FieldElement::zeroed_vector(shift);
+        subtractee.push(coefficient);
+        subtractee = mul(&subtractee, &b);
+        result[shift] = coefficient;
+        a = sub(&a, &subtractee);
+        apos = degree_of(&a);
     }
+
+    Some((result, a))
 }
