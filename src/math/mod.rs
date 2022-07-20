@@ -2,6 +2,7 @@ mod utils;
 mod field_element;
 mod polynomial;
 mod errors;
+mod m_polynomial;
 
 
 // Field modulus = 2^128 - 45 * 2^40 + 1
