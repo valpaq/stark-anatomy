@@ -1,7 +1,7 @@
 mod utils;
 mod field_element;
 mod polynomial;
-mod errors;
+pub mod errors;
 mod m_polynomial;
 
 

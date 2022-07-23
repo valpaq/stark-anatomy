@@ -149,7 +149,7 @@ impl MPolynomial {
         let x = variables.last().expect("no last on variables");
         let mut acc: HashMap<Vec<u128>, FieldElement> = HashMap::new();
         for i in 0..poly.len() {
-            let mut tmp_hash = Self::mul(&Self::constant(poly[i]), &Self::xor(&x, i));
+            let tmp_hash = Self::mul(&Self::constant(poly[i]), &Self::xor(&x, i));
             acc = Self::add(&acc, &tmp_hash);
         }
         acc
