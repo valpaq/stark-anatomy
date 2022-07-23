@@ -3,3 +3,5 @@ pub mod math;
 pub use math::*;
 pub mod proof_stream;
 pub use proof_stream::ProofStream;
+pub mod merkle_tree;
+pub use merkle_tree::Merkle;
